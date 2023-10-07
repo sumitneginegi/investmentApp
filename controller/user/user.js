@@ -205,6 +205,13 @@ async function updateWalletInSubscription(userId, amount, dateAdded, planId) {
       return;
     }
 
+
+    // Check if the wallet array has reached the maximum limit (e.g., 30 items)
+    if (subscription.wallet.length > 30) {
+      console.error("Wallet array already reached the maximum limit");
+      return;
+    }
+
     // Update the wallet array inside the subscription
     subscription.wallet.push({
       amount,
@@ -241,8 +248,6 @@ exports.creditProfitToUserWallet = async (req, res) => {
           // Check if updatedDate is one day before and earlier than currentDate
           if (updatedDate.getDate() < currentDate.getDate()) {
 
-            // Check if the current time is within the desired time frame (5 to 7 PM)
-            // const currentTime = new Date();
             const startOfDay = new Date(currentDate);
             startOfDay.setHours(0, 0, 0, 0);
             const startTime = new Date(startOfDay);
@@ -252,8 +257,6 @@ exports.creditProfitToUserWallet = async (req, res) => {
             console.log(currentDate);
             console.log(startTime);
             if (currentDate >= startTime && currentDate <= endTime) {
-
-
 
               // Calculate the amount to add to the wallet for each day
               const amountToAddPerDay = 100;
@@ -361,9 +364,17 @@ exports.updateUserSubscriptionofparticularPlan = async (req, res) => {
     }
     console.log(walletToExtract)
 
+    // Check if daysleft is already zero
+    if (specificPlan.daysleft === 0) {
+      return res.status(200).json({ message: 'Daysleft is already zero' });
+    }
+
     // Update the "amount" and "dateAdded" fields of walletToExtract
     walletToExtract.amount = updatedAmount;
     walletToExtract.dateAdded = dateAdded;
+
+    // Decrease daysleft by 1, but ensure it doesn't go below 0
+    specificPlan.daysleft = Math.max(0, specificPlan.daysleft - 1);
 
     // Save the updated user document
     await user.save();
@@ -376,7 +387,7 @@ exports.updateUserSubscriptionofparticularPlan = async (req, res) => {
         ...specificPlan.toObject(), // Convert specificPlan to an object
         wallet: [walletToExtract], // Include only the matching wallet object
       },
-    };
+    }
     return res.status(200).json(response);
   } catch (error) {
     console.error(error);
