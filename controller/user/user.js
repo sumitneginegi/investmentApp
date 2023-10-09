@@ -12,6 +12,7 @@ const dbConnect = require("../../config/DBConnect");
 dbConnect()
 
 const twilio = require("twilio");
+const { use } = require("../../route/user/user");
 // var newOTP = require("otp-generators");
 
 const reffralCode = async () => {
@@ -240,13 +241,18 @@ exports.creditProfitToUserWallet = async (req, res) => {
 
     for (const user of users) {
       for (const subscription of user.subscriptions) {
-        if (subscription.daysleft > 0) {
+        if (subscription.daysleft > 0 && subscription.wallet.length <= 30) {
+
           const updatedDate = subscription.updatedDate;
           const currentDate = new Date();
-
-
+          console.log(updatedDate.getDate());
           // Check if updatedDate is one day before and earlier than currentDate
-          if (updatedDate.getDate() < currentDate.getDate()) {
+          if (updatedDate.getFullYear() < currentDate.getFullYear() ||
+            (updatedDate.getFullYear() === currentDate.getFullYear() &&
+              updatedDate.getMonth() < currentDate.getMonth()) ||
+            (updatedDate.getFullYear() === currentDate.getFullYear() &&
+              updatedDate.getMonth() === currentDate.getMonth() &&
+              updatedDate.getDate() < currentDate.getDate())) {
 
             const startOfDay = new Date(currentDate);
             startOfDay.setHours(0, 0, 0, 0);
@@ -302,15 +308,16 @@ exports.creditProfitToUserWallet = async (req, res) => {
               console.log(currentDate);
               console.log(startTime);
               console.log("5 to 7");
+              return res.status(404).json({ message: "5 to 7" });
 
             } else {
               console.log("not in 5 to 7")
+              return res.status(404).json({ message: "not in 5 to 7" });
             }
           } else {
             console.log("Current date is higher than or equal to updated date.")
+            return res.status(404).json({ message: "Current date is higher than or equal to updated date." });
           }
-        } else {
-          console.log("all subscription has no remaining credits");
         }
       }
     }
@@ -396,5 +403,49 @@ exports.updateUserSubscriptionofparticularPlan = async (req, res) => {
 };
 
 
+
+
+exports.calculateTotalWalletAmount = async (req, res) => {
+  try {
+    const userId = new objectId(req.query.userId); // Replace with the user's _id
+    const planId = new objectId(req.query.planId); // Replace with the plan's _id
+
+    // Use the aggregation framework to calculate the total amount
+    const result = await User.aggregate([
+      {
+        $match: { _id: userId }
+      },
+      {
+        $unwind: "$subscriptions"
+      },
+      {
+        $match: {
+          "subscriptions.plan": planId,
+          "subscriptions.wallet": { $exists: true, $not: { $size: 0 } } // Ensure the wallet array exists and is not empty
+        }
+      },
+      {
+        $unwind: "$subscriptions.wallet"
+      },
+      {
+        $group: {
+          _id: null,
+          totalAmount: { $sum: "$subscriptions.wallet.amount" } // Assuming the wallet array has an "amount" field
+        }
+      }
+    ]);
+
+    if (result.length === 0) {
+      return res.status(404).json({ message: "No data found" });
+    }
+
+    // Send the total amount as a response
+    return res.status(200).json({ message: "Total wallet amount calculated successfully", data: result[0].totalAmount });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: err.message });
+  }
+};
 
 

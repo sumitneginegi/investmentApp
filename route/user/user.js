@@ -7,7 +7,8 @@ const {
     loginCustomer,
     creditProfitToUserWallet,
     getAllCustomer,
-    updateUserSubscriptionofparticularPlan
+    updateUserSubscriptionofparticularPlan,
+    calculateTotalWalletAmount
 } = require("../../controller/user/user");
 
 
@@ -58,6 +59,9 @@ router.put("/creditProfitToUserWallet/", creditProfitToUserWallet);
 
 router.get("/getAll/Customer", getAllCustomer);
 router.put("/updateUserSubscriptionof/particularPlan/:userId", updateUserSubscriptionofparticularPlan);
+
+router.get("/get/calculateTotalWalletAmount/Customer", calculateTotalWalletAmount);
+
 
 
 
